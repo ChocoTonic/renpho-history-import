@@ -10,7 +10,7 @@ class NovaRoundTrip(unittest.TestCase):
         self.source.update(weightControl=2.5, reportId="source", deviceType="00053",
                            mac="AA:BB:CC:DD:EE:FF", timeStamp=1735689600, id=2, userId=42,
                            localCreatedAt="2025-01-01 08:00:00")
-        self.device = dict(self.source, reportId="destination", timeStamp=1, displayModuleType=1, isAuto=2)
+        self.device = dict(self.source, reportId="destination", timeStamp=1, z20Body=3, displayModuleType=1, isAuto=2)
         self.existing = [(self.device, True)]
 
     def test_upload(self):
@@ -43,4 +43,14 @@ class NovaRoundTrip(unittest.TestCase):
         with self.assertRaises(ValueError):
             plan([self.source], [(dict(self.device, mac="11:11:11:11:11:11"), True)])
         _, conflicts = plan([self.source], self.existing + [(self.source, False)])
+        self.assertEqual(conflicts, [self.source["timeStamp"]])
+
+    def test_date_shift_conflict(self):
+        shifted = dict(self.source, timeStamp=self.source["timeStamp"] + 3600)
+        pending, conflicts = plan([self.source], [(shifted, True)])
+        self.assertFalse(pending)
+        self.assertEqual(conflicts, [self.source["timeStamp"]])
+        changed_local = dict(self.source, localCreatedAt="2025-01-02 08:00:00")
+        pending, conflicts = plan([self.source], [(changed_local, True)])
+        self.assertFalse(pending)
         self.assertEqual(conflicts, [self.source["timeStamp"]])

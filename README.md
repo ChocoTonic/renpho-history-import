@@ -94,5 +94,5 @@ The import keeps the measurement epoch, formats the upload's local time in
 the supplied zone, and lets the destination issue a new report ID. It writes
 one report at a time and checks 89 measurement values in composition history.
 Repeated equivalent measurements at one timestamp produce one destination
-reading. A different measurement at an occupied timestamp is a conflict. Run
+reading. A different measurement at an occupied timestamp is a conflict. The plan also flags a matching weight and ten impedances from the same scale at a different epoch. Readback checks the original local date and time. Run
 the plan again after an interrupted upload.

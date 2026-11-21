@@ -36,9 +36,23 @@ def full_match(expected, actual):
                math.isclose(expected[k], actual[k], rel_tol=0, abs_tol=0.0001) for k in METRICS)
 
 
+def equivalent(expected, actual):
+    return expected["localCreatedAt"] == actual.get("localCreatedAt") and full_match(expected, actual)
+
+
+def fingerprint(row):
+    measurements = [row.get(k) for k in ("weight", *sorted(CHANNELS))]
+    if not all(type(v) in (int, float) and math.isfinite(v) and v > 0 for v in measurements):
+        return None
+    address = str(row.get("mac") or "").replace(":", "").replace("-", "").strip().lower()
+    return (address, *measurements)
+
+
 def validate(row):
     if not isinstance(row, dict) or row.get("deviceType") != MODEL or not row.get("reportId"):
         raise ValueError("Expected an exported Nova Full Report")
+    if not isinstance(row.get("localCreatedAt"), str) or not row["localCreatedAt"]:
+        raise ValueError("Missing original local measurement time")
     if type(row.get("timeStamp")) is not int or row["timeStamp"] <= 0:
         raise ValueError("Invalid measurement timestamp")
     if not isinstance(row.get("mac"), str) or not row["mac"].strip("0:- "):
@@ -60,6 +74,13 @@ def history(client):
 def plan(source, destination):
     devices = [r for r, comp in destination if comp and r.get("deviceType") == MODEL and r.get("reportId")]
     pending, conflicts, planned = [], [], {}
+    # The ten impedances together with the mass identify possible date-shifted copies.
+    # A collision here requires review because the times alone disagree.
+    fingerprints = {}
+    for actual in devices:
+        key = fingerprint(actual)
+        if key is not None:
+            fingerprints.setdefault(key, set()).add(actual.get("timeStamp"))
     for row in source:
         validate(row)
         stamp = row["timeStamp"]
@@ -68,15 +89,21 @@ def plan(source, destination):
             raise ValueError("Destination has no Nova Full Report from the source scale")
         if stamp in planned:
             previous = planned[stamp]
-            if not (same_address(previous, row["mac"]) and full_match(row, previous)):
+            if not (same_address(previous, row["mac"]) and equivalent(row, previous)):
                 conflicts.append(stamp)
             continue
         planned[stamp] = row
         candidates = [(r, comp) for r, comp in destination if r.get("timeStamp") == stamp]
         if not candidates:
-            pending.append((row, device))
+            key = fingerprint(row)
+            dates = fingerprints.setdefault(key, set())
+            if dates - {stamp}:
+                conflicts.append(stamp)
+            else:
+                pending.append((row, device))
+            dates.add(stamp)
         elif not any(comp and r.get("deviceType") == MODEL and r.get("reportId")
-                     and same_address(r, row["mac"]) and full_match(row, r) for r, comp in candidates):
+                     and same_address(r, row["mac"]) and equivalent(row, r) for r, comp in candidates):
             conflicts.append(stamp)
     return pending, conflicts
 
