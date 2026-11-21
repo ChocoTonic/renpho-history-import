@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export and restore MorphoScan Nova Full Reports between RENPHO profiles."""
+"""Export and restore RENPHO MorphoScan Nova (R-MSC04) Full Reports between profiles."""
 import argparse
 import getpass
 import json
@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from renpho_import import same_address, upload
 
-MODEL = "00053"
+MORPHOSCAN_NOVA_DEVICE_TYPE = "00053"
 CHANNELS = {f"z{hz}{part}" for hz in (20, 100) for part in ("Body", "HandL", "HandR", "FootL", "FootR")}
 REGIONAL = {
     prefix + field for prefix in ("la", "ra", "ll", "rl", "t")
@@ -49,7 +49,7 @@ def fingerprint(row):
 
 
 def validate(row):
-    if not isinstance(row, dict) or row.get("deviceType") != MODEL or not row.get("reportId"):
+    if not isinstance(row, dict) or row.get("deviceType") != MORPHOSCAN_NOVA_DEVICE_TYPE or not row.get("reportId"):
         raise ValueError("Expected an exported Nova Full Report")
     if not isinstance(row.get("localCreatedAt"), str) or not row["localCreatedAt"]:
         raise ValueError("Missing original local measurement time")
@@ -72,7 +72,7 @@ def history(client):
 
 
 def plan(source, destination):
-    devices = [r for r, comp in destination if comp and r.get("deviceType") == MODEL and r.get("reportId")]
+    devices = [r for r, comp in destination if comp and r.get("deviceType") == MORPHOSCAN_NOVA_DEVICE_TYPE and r.get("reportId")]
     pending, conflicts, planned = [], [], {}
     # The ten impedances together with the mass identify possible date-shifted copies.
     # A collision here requires review because the times alone disagree.
@@ -102,7 +102,7 @@ def plan(source, destination):
             else:
                 pending.append((row, device))
             dates.add(stamp)
-        elif not any(comp and r.get("deviceType") == MODEL and r.get("reportId")
+        elif not any(comp and r.get("deviceType") == MORPHOSCAN_NOVA_DEVICE_TYPE and r.get("reportId")
                      and same_address(r, row["mac"]) and equivalent(row, r) for r, comp in candidates):
             conflicts.append(stamp)
     return pending, conflicts
@@ -114,7 +114,7 @@ def payload(row, device, uid, zone):
                      if not (d := instant.replace(month=month, day=1)).dst()), instant)
     data = {k: row[k] for k in METRICS | METADATA if row.get(k) is not None}
     data.update(id=0, userId=int(uid), bUserId=int(uid), dataSource=1, mac=device["mac"],
-                deviceType=MODEL, isAuto=device["isAuto"], displayModuleType=device["displayModuleType"],
+                deviceType=MORPHOSCAN_NOVA_DEVICE_TYPE, isAuto=device["isAuto"], displayModuleType=device["displayModuleType"],
                 timeStamp=row["timeStamp"], localCreatedAt=instant.strftime("%Y-%m-%d %H:%M:%S"),
                 timeZone=standard.tzname(), WC=data.pop("weightControl"))
     return data
@@ -150,7 +150,7 @@ def main():
         client.login(expected_user_id=args.account_id)
     destination = history(client)
     if args.action == "export":
-        rows = [row for row, comp in destination if comp and row.get("deviceType") == MODEL and row.get("reportId")]
+        rows = [row for row, comp in destination if comp and row.get("deviceType") == MORPHOSCAN_NOVA_DEVICE_TYPE and row.get("reportId")]
         for row in rows:
             validate(row)
         with os.fdopen(os.open(args.json, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as f:

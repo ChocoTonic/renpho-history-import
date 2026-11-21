@@ -2,12 +2,12 @@
 
 Restore a RENPHO Health guest-mode CSV into your signed-in RENPHO Health account. The importer previews conflicts, uploads in small batches, and reads each batch back before continuing.
 
-Tested end to end with a **RENPHO ES-CS20M**, Android RENPHO Health **7.11.6**, and an export of **749 readings**. Other models and export formats are untested. The script uses an unofficial RENPHO API that may change.
+Tested end to end with a **RENPHO Elis 1** (hardware model `ES-CS20M`), Android RENPHO Health **7.11.6**, and an export of **749 readings**. Other models and export formats are untested. The script uses an unofficial RENPHO API that may change.
 
 ## Before you start
 
 - Keep your original CSV. This tool expects the English RENPHO Health export with pound-based weight and mass columns. [Synthetic CSV](examples/synthetic.csv) shows the input format.
-- Sign into the destination RENPHO Health account and take a normal weigh-in with the **same physical ES-CS20M** that produced the export. The script reuses the device address from the most recent standard-scale reading with device type `00007` and a usable address. If you've used multiple scales with that device type, verify the most recent one is the intended scale before proceeding.
+- Sign into the destination RENPHO Health account and take a normal weigh-in with the **same physical ES-CS20M** that produced the export. The script reuses the device address from the most recent standard-scale reading with API `deviceType` value `00007` and a usable address. If you've used multiple scales with that device type, verify the most recent one is the intended scale before proceeding.
 - Use your RENPHO Health email and **RENPHO password**. The script prompts for the password locally. If you normally use Google sign-in, verify that password sign-in opens the same RENPHO profile before uploading.
 - Know the time zone used in the CSV. Use an IANA zone such as `America/Chicago` so historical daylight-saving offsets are applied. The script stops on ambiguous or nonexistent local timestamps.
 
@@ -76,7 +76,7 @@ Authentication, encryption, and history reads use [renpho-py](https://github.com
 
 ## Transfer MorphoScan Nova Full Reports
 
-Use the Nova command for model R-MSC04. It exports the signed-in profile's cloud
+Use the Nova command for the **RENPHO MorphoScan Nova** (hardware model `R-MSC04`, observed API `deviceType` value `00053`). It exports the signed-in profile's cloud
 composition records to a new private JSON file, including all ten impedance
 channels and 30 regional values. Keep this file private. The destination needs
 an existing Full Report from the same scale. Supply the respective numeric
