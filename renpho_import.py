@@ -145,11 +145,11 @@ def differences(expected, actual, ignored=frozenset()):
     ]
 
 
-def upload(client, rows, zone):
+def upload(client, rows, zone, *, endpoint=UPLOAD, instant=None):
     from renpho.constants import APP_VERSION, PLATFORM
     from renpho.crypto import encrypt_request
 
-    offset = datetime.now(zone).strftime("%z")
+    offset = (instant or datetime.now(zone)).strftime("%z")
     hour = int(offset[1:3])
     short_offset = f"{offset[0]}{hour}" + (f":{offset[3:]}" if offset[3:] != "00" else "")
     headers = {
@@ -158,8 +158,8 @@ def upload(client, rows, zone):
         "Content-Type": "application/json", "timeZone": short_offset,
         "zoneId": zone.key,
     }
-    result = client._transport.post(UPLOAD, encrypt_request(rows), headers=headers)
-    if result.get("code") not in (0, "0", 200, "200", 20000, "20000") and (
+    result = client._transport.post(endpoint, encrypt_request(rows), headers=headers)
+    if result.get("code") not in (0, "0", 101, "101", 200, "200", 20000, "20000") and (
         str(result.get("msg", "")).lower() != "success"
     ):
         code = str(result.get("code", "unknown"))

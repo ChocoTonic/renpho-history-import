@@ -73,3 +73,26 @@ The ES-CS20M upload uses RENPHO's standard-scale history route. On that route, m
 The standard-scale payload has no standalone skeletal muscle mass (`smmMass`) field. Keep the CSV if you need that column as originally exported. The importer also leaves raw impedance and other device measurements out because the CSV lacks them.
 
 Authentication, encryption, and history reads use [renpho-py](https://github.com/ChocoTonic/renpho-py). The script talks directly to RENPHO and keeps the password, session token, and device address in memory.
+
+## Transfer MorphoScan Nova Full Reports
+
+Use the Nova command for model R-MSC04. It exports the signed-in profile's cloud
+composition records to a new private JSON file, including all ten impedance
+channels and 30 regional values. Keep this file private. The destination needs
+an existing Full Report from the same scale. Supply the respective numeric
+source and destination profile IDs.
+
+```sh
+python nova_history.py export --email source@example.com --account-id SOURCE_ID --json reports.json
+python nova_history.py plan --email destination@example.com --account-id DEST_ID --json reports.json
+python nova_history.py import --email destination@example.com --account-id DEST_ID --json reports.json --timezone America/Chicago
+```
+
+Each command also accepts a renpho-py session file via `--session PATH` in
+place of `--email`. Password login can end an existing mobile session.
+The import keeps the measurement epoch, formats the upload's local time in
+the supplied zone, and lets the destination issue a new report ID. It writes
+one report at a time and checks 89 measurement values in composition history.
+Repeated equivalent measurements at one timestamp produce one destination
+reading. A different measurement at an occupied timestamp is a conflict. Run
+the plan again after an interrupted upload.
